@@ -7,7 +7,7 @@
 // dynamic-import edges, and prints the shortest eager chain to each target.
 //
 // Usage: node scripts/why-eager.mjs <substring> [<substring> ...]
-import { build } from "vite";
+import { build, loadConfigFromFile } from "vite";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -19,7 +19,19 @@ if (targets.length === 0) {
   process.exit(1);
 }
 
-const { sharedViteConfig } = await import(path.join(appDir, "vite.config.ts"));
+// Loaded through Vite rather than a bare import(): vite.config.ts is
+// TypeScript and its sibling plugins use extensionless-to-.js specifiers that
+// only a bundler resolves. Node would exit with ERR_MODULE_NOT_FOUND.
+const loaded = await loadConfigFromFile(
+  { command: "build", mode: "production" },
+  path.join(appDir, "vite.config.ts"),
+  appDir,
+);
+if (loaded === null) {
+  console.error("could not load apps/app/vite.config.ts");
+  process.exit(1);
+}
+const sharedViteConfig = loaded.config;
 
 /** id -> { static: string[], dynamic: string[] } */
 const graph = new Map();

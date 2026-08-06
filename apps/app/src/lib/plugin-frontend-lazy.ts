@@ -14,28 +14,70 @@
  */
 type PluginFrontendModule = typeof import("./plugin-frontend");
 
-let modulePromise: Promise<PluginFrontendModule> | null = null;
-
-function loadPluginFrontend(): Promise<PluginFrontendModule> {
-  modulePromise ??= import("./plugin-frontend");
-  return modulePromise;
+/**
+ * Caches a module import, but drops the cache when the import rejects.
+ *
+ * A chunk fetch fails on a flaky network. Caching the rejected promise would
+ * replay that one failure for the rest of the page's life, so plugin UI could
+ * never come back without a reload.
+ */
+export function createRetryingModuleLoader<T>(
+  load: () => Promise<T>,
+): () => Promise<T> {
+  let pending: Promise<T> | null = null;
+  return () => {
+    pending ??= load().catch((error: unknown) => {
+      pending = null;
+      throw error;
+    });
+    return pending;
+  };
 }
 
-/** Loads the plugin runtime chunk, then boots the plugin frontends. */
+const loadPluginFrontend = createRetryingModuleLoader<PluginFrontendModule>(
+  () => import("./plugin-frontend"),
+);
+
+let bootRequested = false;
+
+/**
+ * Loads the plugin runtime chunk, then boots the plugin frontends.
+ *
+ * Matches `bootPluginFrontends`' own contract that a plugin failure leaves the
+ * app unharmed. The chunk fetch is the one step that module cannot guard for
+ * itself, and callers boot this from an effect without awaiting it, so an
+ * escaping rejection would surface as an unhandled one.
+ */
 export async function bootPluginFrontends(): Promise<void> {
-  const pluginFrontend = await loadPluginFrontend();
-  await pluginFrontend.bootPluginFrontends();
+  bootRequested = true;
+  try {
+    const pluginFrontend = await loadPluginFrontend();
+    await pluginFrontend.bootPluginFrontends();
+  } catch (error) {
+    console.warn(
+      `plugin runtime load failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 /**
- * Mirrors `schedulePluginFrontendReconcile`'s own "boot never started, nothing
- * to reconcile" guard. Realtime `plugins-changed` broadcasts arrive on every
- * page, so without this check the first broadcast would pull the runtime chunk
- * back onto the critical path.
+ * Realtime `plugins-changed` hook. Broadcasts arrive on every page, so the
+ * guard keeps the first one from pulling the runtime chunk onto the critical
+ * path before anything asked for plugins.
  */
 export function schedulePluginFrontendReconcile(): void {
-  if (modulePromise === null) return;
-  void loadPluginFrontend().then((pluginFrontend) => {
-    pluginFrontend.schedulePluginFrontendReconcile();
-  });
+  if (!bootRequested) return;
+  void (async () => {
+    try {
+      const pluginFrontend = await loadPluginFrontend();
+      // If the chunk fetch failed during boot then plugin-frontend never
+      // booted, and its own reconcile guard would no-op forever. Booting here
+      // recovers from that; it costs nothing once booted, because
+      // bootPluginFrontends is idempotent per page load.
+      await pluginFrontend.bootPluginFrontends();
+      pluginFrontend.schedulePluginFrontendReconcile();
+    } catch {
+      // Plugin UI stays absent until the next plugins-changed broadcast.
+    }
+  })();
 }

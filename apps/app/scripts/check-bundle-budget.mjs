@@ -15,9 +15,16 @@ const distDir = path.resolve(appDir, process.argv[2] ?? "dist");
 const statsPath = path.join(appDir, "bundle-stats.json");
 const budgetPath = path.join(appDir, "bundle-budget.json");
 
-if (!fs.existsSync(statsPath)) {
-  console.error(`missing ${path.relative(appDir, statsPath)} — run the app build first`);
+const die = (message) => {
+  console.error(message);
   process.exit(1);
+};
+
+if (!fs.existsSync(statsPath)) {
+  die(`missing ${path.relative(appDir, statsPath)} — run the app build first`);
+}
+if (!fs.existsSync(distDir)) {
+  die(`missing ${path.relative(appDir, distDir)} — run the app build first`);
 }
 
 const stats = JSON.parse(fs.readFileSync(statsPath, "utf8"));
@@ -26,12 +33,20 @@ const budget = JSON.parse(fs.readFileSync(budgetPath, "utf8"));
 const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
 const failures = [];
 
+// A boot chunk with no .br file would otherwise weigh zero against the
+// compressed budget, so an unrun precompression step could hide real growth.
+// Treat it as an error rather than guessing a size.
+const missingBrotli = [];
 let bootBytes = 0;
 let bootBrotliBytes = 0;
 for (const chunk of stats.bootChunks) {
   bootBytes += chunk.bytes;
   const brotliPath = path.join(distDir, `${chunk.fileName}.br`);
-  if (fs.existsSync(brotliPath)) bootBrotliBytes += fs.statSync(brotliPath).size;
+  if (fs.existsSync(brotliPath)) {
+    bootBrotliBytes += fs.statSync(brotliPath).size;
+  } else {
+    missingBrotli.push(chunk.fileName);
+  }
 }
 
 const forbidden = new Set(budget.forbiddenBootPackages);
@@ -48,6 +63,11 @@ console.log(`boot payload: ${kb(bootBytes)} raw / ${kb(bootBrotliBytes)} brotli`
 console.log(`  budget:     ${kb(budget.maxBootBytes)} raw / ${kb(budget.maxBootBrotliBytes)} brotli`);
 console.log(`  chunks:     ${stats.bootChunks.length}`);
 
+if (missingBrotli.length > 0) {
+  failures.push(
+    `${missingBrotli.length} boot chunk(s) have no .br file, so the compressed total is understated: ${missingBrotli.join(", ")}. Run scripts/precompress-app-dist.mjs.`,
+  );
+}
 if (bootBytes > budget.maxBootBytes) {
   failures.push(
     `boot payload is ${kb(bootBytes)}, over the ${kb(budget.maxBootBytes)} raw budget by ${kb(bootBytes - budget.maxBootBytes)}.`,
