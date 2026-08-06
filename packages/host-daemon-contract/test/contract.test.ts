@@ -1036,12 +1036,12 @@ describe("host-daemon local schemas", () => {
 });
 
 describe("host-daemon command schemas", () => {
-  // Version 73 adds `workspace.discover_repos` and widens the provider-usage
-  // `error` variant with locally-known plan/account fields. An older daemon has
-  // no handler for the command and sends the narrower error shape, so the bump
-  // forces an update before the server relies on either.
-  it("uses protocol version 73 for repo discovery and usage plan fallback", () => {
-    expect(HOST_DAEMON_PROTOCOL_VERSION).toBe(73);
+  // Version 74 preserves version 73's repo-discovery and provider-usage
+  // changes, defines terminal.input as arbitrary base64 bytes, and adds bounded
+  // terminal replay metadata. The bump keeps older daemons from corrupting
+  // chunked input or ignoring browser replay limits.
+  it("uses protocol version 74 for byte-preserving input and bounded replay", () => {
+    expect(HOST_DAEMON_PROTOCOL_VERSION).toBe(74);
   });
 
   it("binds Plan cancellation to a required turn id and typed result", () => {
@@ -3553,6 +3553,23 @@ describe("host-daemon session schemas", () => {
 
     expect(
       hostDaemonServerWsMessageSchema.safeParse({
+        type: "terminal.attach",
+        requestId: "request-1",
+        terminalId: "term_123",
+        sinceSeq: 12,
+        tailBytes: 512 * 1024,
+      }).success,
+    ).toBe(true);
+    expect(
+      hostDaemonServerWsMessageSchema.safeParse({
+        type: "terminal.attach",
+        requestId: "request-1",
+        terminalId: "term_123",
+        sinceSeq: 12,
+      }).success,
+    ).toBe(false);
+    expect(
+      hostDaemonServerWsMessageSchema.safeParse({
         type: "terminal.input",
         terminalId: "term_123",
         dataBase64: maxPayload,
@@ -3575,6 +3592,7 @@ describe("host-daemon session schemas", () => {
             dataBase64: oversizedDecodedPayload,
           },
         ],
+        replayStartSeq: 0,
         nextSeq: 1,
       }).success,
     ).toBe(false);

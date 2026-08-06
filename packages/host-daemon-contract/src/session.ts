@@ -529,6 +529,11 @@ const hostDaemonTerminalAttachMessageSchema = z
     requestId: terminalRequestIdSchema,
     terminalId: terminalIdSchema,
     sinceSeq: z.number().int().nonnegative(),
+    tailBytes: z
+      .number()
+      .int()
+      .positive()
+      .max(4 * 1024 * 1024),
   })
   .strict();
 
@@ -627,6 +632,7 @@ const hostDaemonTerminalReplayMessageSchema = z
     requestId: terminalRequestIdSchema,
     terminalId: terminalIdSchema,
     chunks: z.array(hostDaemonTerminalOutputChunkSchema),
+    replayStartSeq: z.number().int().nonnegative(),
     nextSeq: z.number().int().nonnegative(),
   })
   .strict();

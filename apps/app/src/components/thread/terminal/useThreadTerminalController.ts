@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { TerminalSession } from "@bb/server-contract";
 import {
   useCloseTerminal,
@@ -21,6 +22,10 @@ import {
   useRemoveFixedRightTerminalTab,
   useSetFixedRightTerminalActiveTerminal,
 } from "@/lib/fixed-panel-tabs";
+import {
+  applyTerminalSessionClose,
+  applyTerminalSessionUpsert,
+} from "@/hooks/cache-owners/terminal-cache-owner";
 import {
   shouldCloseUnretainedDisconnectedTerminalSession,
   shouldShowRetainedTerminalSession,
@@ -49,6 +54,7 @@ export interface ThreadTerminalController {
   canCreateTerminal: boolean;
   closingTerminalId: string | null;
   emptyTerminalMessage: string;
+  handleActiveTerminalSessionChange: (session: TerminalSession) => void;
   handleActiveTerminalTitleChange: ThreadTerminalTitleChangeHandler;
   handleActiveTerminalUserInput: ThreadTerminalActionHandler;
   handleClosePanel: ThreadTerminalActionHandler;
@@ -149,6 +155,7 @@ export function useThreadTerminalController({
   panelStateId,
   target,
 }: ThreadTerminalControllerArgs): ThreadTerminalController {
+  const queryClient = useQueryClient();
   const terminalTargetKind = target.kind;
   const terminalTargetId =
     target.kind === "thread"
@@ -557,6 +564,21 @@ export function useThreadTerminalController({
     [closeTerminal, removeFixedTerminalTab],
   );
 
+  const handleActiveTerminalSessionChange = useCallback(
+    (session: TerminalSession) => {
+      if (session.status === "exited") {
+        applyTerminalSessionClose({
+          queryClient,
+          session,
+          terminalId: session.id,
+        });
+        return;
+      }
+      applyTerminalSessionUpsert({ queryClient, session });
+    },
+    [queryClient],
+  );
+
   const handleActiveTerminalUserInput = useCallback(() => {
     if (!activeTerminalId) {
       return;
@@ -682,6 +704,7 @@ export function useThreadTerminalController({
     canCreateTerminal,
     closingTerminalId,
     emptyTerminalMessage,
+    handleActiveTerminalSessionChange,
     handleActiveTerminalTitleChange,
     handleActiveTerminalUserInput,
     handleClosePanel,
