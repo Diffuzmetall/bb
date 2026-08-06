@@ -49,6 +49,13 @@
 - Typecheck with `pnpm exec turbo run typecheck --filter=@bb/<pkg>`.
 - Do not run package scripts directly, such as `pnpm --filter @bb/foo test`, or raw `npx tsc --noEmit` unless you are deliberately bypassing repo orchestration for investigation.
 
+## Web App Boot Payload
+
+- CI enforces a budget on the JavaScript that blocks first paint in `@bb/app`. See [apps/app/bundle-budget.json](apps/app/bundle-budget.json) for the byte limits and the packages that must stay off the boot path.
+- Run it with `node apps/app/scripts/check-bundle-budget.mjs` after an app build.
+- The usual cause of a failure is a barrel re-export: an eagerly rendered module imports one small helper from an `index.ts` that also exports heavy components, so the whole barrel loads before first paint. Import from the defining module instead, or move the caller behind `React.lazy`.
+- Run `node apps/app/scripts/why-eager.mjs <package>` in `apps/app` to print the exact static import chain from the entry to a package. It rebuilds with a plugin that dumps rolldown's real module graph, so it reports what shipped, not what the source appears to say.
+
 ## Testing
 
 - Only write high quality tests that verify where there could be potential bugs. Avoid testing trivial getters/setters, framework wiring, or other code that is unlikely to break.
