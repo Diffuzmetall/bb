@@ -144,11 +144,7 @@ import {
   PluginPanelTabContent,
   usePluginPanelActions,
 } from "@/components/plugin/PluginPanelActions";
-import {
-  PluginThreadPanelNavigationProvider,
-  type PluginFileOpenerOpenHandler,
-} from "@/components/plugin/plugin-thread-panel-navigation";
-import { buildFileOpenerPanelTab } from "@/components/plugin/file-opener-tabs";
+import { PluginThreadPanelNavigationProvider } from "@/components/plugin/plugin-thread-panel-navigation";
 import { usePluginSlots } from "@/lib/plugin-slots";
 import { getFileExtension } from "@/lib/file-opener-preference";
 import { Icon } from "@bb/shared-ui/icon";
@@ -1021,35 +1017,6 @@ function ThreadDetailViewInternal(props: ThreadDetailViewInternalProps) {
       },
       [openCompactDrawer, openPluginPanel, pluginThreadPanelActions],
     );
-  const handleOpenPluginFileOpener = useCallback<PluginFileOpenerOpenHandler>(
-    ({ pluginId, openerId, path, source }) => {
-      const opener = pluginFileOpeners.find(
-        (candidate) =>
-          candidate.pluginId === pluginId && candidate.id === openerId,
-      );
-      if (opener === undefined) return false;
-      if (source === "workspace" && !thread?.environmentId) return false;
-
-      const tab = buildFileOpenerPanelTab(opener, {
-        path,
-        source: {
-          kind: source,
-          threadId: thread?.id ?? null,
-          environmentId: thread?.environmentId ?? null,
-          projectId: thread?.projectId ?? null,
-        },
-      });
-      openPluginPanel({
-        pluginId: tab.pluginId,
-        actionId: tab.actionId,
-        title: tab.title,
-        paramsJson: tab.paramsJson,
-      });
-      openCompactDrawer();
-      return true;
-    },
-    [openCompactDrawer, openPluginPanel, pluginFileOpeners, thread],
-  );
   const openBrowserTabAndReveal = useCallback(
     (url?: string) => {
       openBrowserTab(url);
@@ -2646,7 +2613,6 @@ function ThreadDetailViewInternal(props: ThreadDetailViewInternalProps) {
   );
   return (
     <PluginThreadPanelNavigationProvider
-      openFileOpener={handleOpenPluginFileOpener}
       openThreadPanel={handleOpenTimelinePluginPanel}
     >
       {threadDetailContent}

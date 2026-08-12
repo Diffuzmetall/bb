@@ -59,9 +59,6 @@ type NavigateCall = {
 } | {
     method: "openThreadPanel";
     options: Parameters<BbNavigate["openThreadPanel"]>[0];
-} | {
-    method: "experimental_openFileOpener";
-    options: Parameters<BbNavigate["experimental_openFileOpener"]>[0];
 };
 interface ComposerLog {
     /** Latest plain text in this isolated composer scope. */
@@ -192,8 +189,6 @@ interface RenderSlotOptions<Contract extends PluginRpcContract = PluginRpcContra
     sidebarPullRequests?: Record<string, PluginSidebarPullRequest>;
     /** Host acceptance for `useBbNavigate().openThreadPanel`. */
     openThreadPanel?: (options: Parameters<BbNavigate["openThreadPanel"]>[0]) => boolean;
-    /** Host acceptance for `useBbNavigate().experimental_openFileOpener`. */
-    experimental_openFileOpener?: (options: Parameters<BbNavigate["experimental_openFileOpener"]>[0]) => boolean;
 }
 /** Host-originated inputs a slot test can drive deterministically. */
 interface RenderedSlotBehaviorDrivers {
