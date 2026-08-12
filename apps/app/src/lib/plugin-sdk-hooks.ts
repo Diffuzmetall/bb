@@ -24,7 +24,10 @@ import {
   PluginSlotOwnershipContext,
   usePluginId,
 } from "@/components/plugin/plugin-context";
-import { usePluginThreadPanelOpenHandler } from "@/components/plugin/plugin-thread-panel-navigation";
+import {
+  usePluginFileOpenerOpenHandler,
+  usePluginThreadPanelOpenHandler,
+} from "@/components/plugin/plugin-thread-panel-navigation";
 import {
   PluginComposerViewContext,
   usePluginComposerHost,
@@ -283,6 +286,7 @@ export function useBbContext(): BbContext {
 export function useBbNavigate(): BbNavigate {
   const pluginId = usePluginId();
   const location = useLocation();
+  const openFileOpenerHandler = usePluginFileOpenerOpenHandler();
   const openThreadPanelHandler = usePluginThreadPanelOpenHandler();
   const navigate = useNavigate();
   const toThread = useCallback(
@@ -342,6 +346,12 @@ export function useBbNavigate(): BbNavigate {
     (options) => openThreadPanelHandler?.({ ...options, pluginId }) ?? false,
     [openThreadPanelHandler, pluginId],
   );
+  const experimentalOpenFileOpener = useCallback<
+    BbNavigate["experimental_openFileOpener"]
+  >(
+    (options) => openFileOpenerHandler?.(options) ?? false,
+    [openFileOpenerHandler],
+  );
   return useMemo(
     () => ({
       toThread,
@@ -349,8 +359,16 @@ export function useBbNavigate(): BbNavigate {
       toPluginPanel,
       toCompose,
       openThreadPanel,
+      experimental_openFileOpener: experimentalOpenFileOpener,
     }),
-    [toThread, toProject, toPluginPanel, toCompose, openThreadPanel],
+    [
+      toThread,
+      toProject,
+      toPluginPanel,
+      toCompose,
+      openThreadPanel,
+      experimentalOpenFileOpener,
+    ],
   );
 }
 

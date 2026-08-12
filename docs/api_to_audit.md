@@ -5,6 +5,26 @@ entry here (see [AGENTS.md](../AGENTS.md), "Plugin API"). Dropping the prefix
 is the deliberate stabilization step: audit the entry, rename project-wide,
 and delete the entry in the same change.
 
+## `useBbNavigate().experimental_openFileOpener`
+
+Lets a plugin open a workspace, host, or thread-storage path with a specific
+registered file opener in the current thread's side panel. The host resolves
+the current thread/environment/project source metadata, validates that the
+target opener is registered, and focuses an identical existing tab instead of
+duplicating it.
+
+Before stabilization, audit:
+
+- whether cross-plugin opener targeting should remain an explicit
+  `pluginId`/`openerId` pair or gain discovery and capability checks;
+- whether source metadata should always be host-resolved from the current
+  thread, or callers need an explicit environment/host target;
+- behavior outside thread panels and on sources an opener does not support;
+- permission and trust expectations when one full-trust plugin launches
+  another plugin's UI;
+- whether missing/disabled target plugins need a structured failure reason
+  instead of the current boolean result.
+
 ## `PluginContentScriptContext.experimental_setThreadRowStatus`
 
 Lets a plugin-lifetime content script set or clear one of its own status

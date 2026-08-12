@@ -29,6 +29,21 @@ function NavigationProbe() {
       >
         Open details
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          setAccepted(
+            navigate.experimental_openFileOpener({
+              pluginId: "md-annotate",
+              openerId: "annotate",
+              path: "README.md",
+              source: "workspace",
+            }),
+          )
+        }
+      >
+        Open annotation
+      </button>
       <span>
         {accepted === null ? "idle" : accepted ? "accepted" : "rejected"}
       </span>
@@ -46,10 +61,14 @@ function PluginProbe() {
 
 describe("plugin thread-panel navigation", () => {
   it("binds generic panel requests to the calling plugin", () => {
+    const openFileOpener = vi.fn(() => true);
     const openThreadPanel = vi.fn(() => true);
     render(
       <MemoryRouter>
-        <PluginThreadPanelNavigationProvider openThreadPanel={openThreadPanel}>
+        <PluginThreadPanelNavigationProvider
+          openFileOpener={openFileOpener}
+          openThreadPanel={openThreadPanel}
+        >
           <PluginProbe />
         </PluginThreadPanelNavigationProvider>
       </MemoryRouter>,
@@ -62,6 +81,16 @@ describe("plugin thread-panel navigation", () => {
       actionId: "details",
       title: "Run details",
       params: { runId: "run_1" },
+    });
+    expect(screen.getByText("accepted")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open annotation" }));
+
+    expect(openFileOpener).toHaveBeenCalledWith({
+      pluginId: "md-annotate",
+      openerId: "annotate",
+      path: "README.md",
+      source: "workspace",
     });
     expect(screen.getByText("accepted")).toBeTruthy();
   });
