@@ -28,6 +28,10 @@ import {
   useOptionalPluginComposerView,
 } from "./plugin-composer-host";
 import { composerCustomizationsForScope } from "./composer-customizations";
+import {
+  PluginThreadPanelNavigationProvider,
+  usePluginThreadPanelOpenHandler,
+} from "./plugin-thread-panel-navigation";
 
 export const PLUGIN_COMPOSER_INLINE_PLUGIN_LIMIT = 3;
 
@@ -108,6 +112,7 @@ function PluginComposerActionList({
   scopeKey: string;
 }) {
   const usageCounts = usePluginComposerActionUsage();
+  const openThreadPanel = usePluginThreadPanelOpenHandler();
   const orderedGroups = useMemo(
     () => orderActionGroups(actions, usageCounts),
     [actions, usageCounts],
@@ -174,16 +179,33 @@ function PluginComposerActionList({
             mobileTitle="More plugin actions"
             className="max-h-[min(24rem,calc(100dvh-4rem))] w-max max-w-[min(28rem,calc(100vw-2rem))] overflow-y-auto p-1.5"
           >
-            <div className="flex flex-col gap-1">
-              {overflowGroups.map((group) => (
-                <PluginComposerActionGroupMount
-                  key={group.pluginId}
-                  group={group}
-                  placement="overflow"
-                  scopeKey={scopeKey}
-                />
-              ))}
-            </div>
+            {overflowGroups.length > 0 && openThreadPanel !== null ? (
+              <PluginThreadPanelNavigationProvider
+                openThreadPanel={openThreadPanel}
+              >
+                <div className="flex flex-col gap-1">
+                  {overflowGroups.map((group) => (
+                    <PluginComposerActionGroupMount
+                      key={group.pluginId}
+                      group={group}
+                      placement="overflow"
+                      scopeKey={scopeKey}
+                    />
+                  ))}
+                </div>
+              </PluginThreadPanelNavigationProvider>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {overflowGroups.map((group) => (
+                  <PluginComposerActionGroupMount
+                    key={group.pluginId}
+                    group={group}
+                    placement="overflow"
+                    scopeKey={scopeKey}
+                  />
+                ))}
+              </div>
+            )}
           </PopoverContent>
         </Popover>
       ) : null}

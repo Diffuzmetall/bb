@@ -795,6 +795,12 @@ interface PluginMessageActionThreadPanelOptions {
     actionId: string;
     title?: string;
     params?: JsonValue;
+    /**
+     * Open the panel as the thread's primary surface: collapse the conversation
+     * so the panel fills the content area. On compact viewports the host still
+     * opens the drawer instead. Experimental: see docs/api_to_audit.md.
+     */
+    experimental_primarySurface?: boolean;
 }
 /** Context handed to a `messageAction`'s `run`. */
 interface PluginMessageActionContext {
@@ -1349,6 +1355,12 @@ interface BbNavigate {
         actionId: string;
         title?: string;
         params?: JsonValue;
+        /**
+         * Open the panel as the thread's primary surface: collapse the conversation
+         * so the panel fills the content area. On compact viewports the host still
+         * opens the drawer instead. Experimental: see docs/api_to_audit.md.
+         */
+        experimental_primarySurface?: boolean;
     }): boolean;
 }
 /**

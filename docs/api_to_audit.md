@@ -5,6 +5,32 @@ entry here (see [AGENTS.md](../AGENTS.md), "Plugin API"). Dropping the prefix
 is the deliberate stabilization step: audit the entry, rename project-wide,
 and delete the entry in the same change.
 
+## `BbNavigate.openThreadPanel({ experimental_primarySurface })`
+
+**What it does.** Lets a plugin ask the host to open one of its
+`threadPanelAction` tabs as the thread's primary surface: the side panel opens
+(or focuses) and the conversation collapses so the panel fills the content
+area. Compact viewports still open the existing drawer instead of collapsing
+chat. The same optional flag exists on `PluginMessageActionThreadPanelOptions`.
+Hosts that do not understand the field ignore it and keep the split chat/panel
+layout.
+
+**Audit before stabilizing.**
+
+1. **Primary vs split.** Confirm collapsing the conversation is the right
+   meaning of "primary", versus swapping the main pane, maximizing a split
+   card, or replacing `ThreadChat` wholesale.
+2. **Reverse path.** Returning to chat currently uses the host's existing
+   Exit Full Screen control in the panel header. Decide whether plugins also
+   need an explicit restore API, and whether the composer button should toggle.
+3. **Arbitration.** Two plugins requesting primary surface in one turn, and a
+   later ordinary `openThreadPanel` while chat is collapsed: confirm the last
+   writer wins, or whether a panel that did not request primary should restore
+   the split.
+4. **Persistence.** Conversation-collapsed is already a per-thread client
+   preference. Confirm a plugin-initiated collapse should share that store, or
+   be ephemeral to the tab that requested it.
+
 ## `PluginContentScriptContext.experimental_setThreadRowStatus`
 
 Lets a plugin-lifetime content script set or clear one of its own status

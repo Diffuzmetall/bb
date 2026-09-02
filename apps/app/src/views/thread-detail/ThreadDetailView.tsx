@@ -125,6 +125,7 @@ import {
 import type { HostConnectionNotice } from "./ThreadTimelinePane";
 import { useThreadStorageViewer } from "@/components/secondary-panel/useThreadStorageViewer";
 import { getThreadConversationCollapsedAtom } from "@/components/secondary-panel/threadSecondaryPanelAtoms";
+import { revealOpenedThreadPluginPanel } from "./threadPluginPanelReveal";
 import {
   HostFilePreviewTabContent,
   ThreadStorageFilePreviewTabContent,
@@ -987,9 +988,25 @@ function ThreadDetailViewInternal(props: ThreadDetailViewInternalProps) {
     threadId,
     togglePersistedPanel: toggleDefaultPersistedSecondaryPanel,
   });
+  const [storedConversationCollapsed, setStoredConversationCollapsed] = useAtom(
+    getThreadConversationCollapsedAtom(threadId),
+  );
+  const isConversationCollapsed = storedConversationCollapsed;
+  // The collapse preference only applies while the panel is open on a wide
+  // viewport; ThreadDetailSecondaryContent gates it (there is nothing to expand
+  // into otherwise) and surfaces the toggle on the seam arrow.
+  const toggleConversationCollapse = useCallback(() => {
+    setStoredConversationCollapsed((collapsed) => !collapsed);
+  }, [setStoredConversationCollapsed]);
   const handleOpenTimelinePluginPanel =
     useCallback<ThreadTimelineOpenPluginPanelHandler>(
-      ({ pluginId, actionId, title, params }) => {
+      ({
+        pluginId,
+        actionId,
+        title,
+        params,
+        experimental_primarySurface,
+      }) => {
         const action = pluginThreadPanelActions.find(
           (candidate) =>
             candidate.pluginId === pluginId && candidate.id === actionId,
@@ -1012,10 +1029,19 @@ function ThreadDetailViewInternal(props: ThreadDetailViewInternalProps) {
           title: title ?? action.title,
           paramsJson,
         });
-        openCompactDrawer();
+        revealOpenedThreadPluginPanel({
+          experimental_primarySurface,
+          openCompactDrawer,
+          setConversationCollapsed: setStoredConversationCollapsed,
+        });
         return true;
       },
-      [openCompactDrawer, openPluginPanel, pluginThreadPanelActions],
+      [
+        openCompactDrawer,
+        openPluginPanel,
+        pluginThreadPanelActions,
+        setStoredConversationCollapsed,
+      ],
     );
   const openBrowserTabAndReveal = useCallback(
     (url?: string) => {
@@ -1085,16 +1111,6 @@ function ThreadDetailViewInternal(props: ThreadDetailViewInternalProps) {
     onSelectPath: handleSelectStorageBrowserPath,
     selectedPath: activeStorageFilePath,
   });
-  const [storedConversationCollapsed, setStoredConversationCollapsed] = useAtom(
-    getThreadConversationCollapsedAtom(threadId),
-  );
-  const isConversationCollapsed = storedConversationCollapsed;
-  // The collapse preference only applies while the panel is open on a wide
-  // viewport; ThreadDetailSecondaryContent gates it (there is nothing to expand
-  // into otherwise) and surfaces the toggle on the seam arrow.
-  const toggleConversationCollapse = useCallback(() => {
-    setStoredConversationCollapsed((collapsed) => !collapsed);
-  }, [setStoredConversationCollapsed]);
   useEffect(() => {
     setHasRequestedMergeBaseOptions(false);
   }, [thread?.environmentId]);

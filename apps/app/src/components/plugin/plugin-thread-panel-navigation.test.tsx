@@ -66,6 +66,43 @@ describe("plugin thread-panel navigation", () => {
     expect(screen.getByText("accepted")).toBeTruthy();
   });
 
+  it("forwards experimental_primarySurface to the thread surface", () => {
+    const openThreadPanel = vi.fn(() => true);
+    function PrimarySurfaceProbe() {
+      const navigate = useBbNavigate();
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            navigate.openThreadPanel({
+              actionId: "details",
+              experimental_primarySurface: true,
+            })
+          }
+        >
+          Open primary
+        </button>
+      );
+    }
+    render(
+      <MemoryRouter>
+        <PluginThreadPanelNavigationProvider openThreadPanel={openThreadPanel}>
+          <PluginSlotMount pluginId="workflows" slotKind="test" slotId="primary">
+            <PrimarySurfaceProbe />
+          </PluginSlotMount>
+        </PluginThreadPanelNavigationProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Open primary" }));
+
+    expect(openThreadPanel).toHaveBeenCalledWith({
+      pluginId: "workflows",
+      actionId: "details",
+      experimental_primarySurface: true,
+    });
+  });
+
   it("returns false outside a thread-panel surface", () => {
     render(
       <MemoryRouter>

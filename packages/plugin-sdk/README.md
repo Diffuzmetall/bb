@@ -19,7 +19,9 @@ and `useComposerView()` for the reactive scope, layout, draft, and run state.
 Any mounted plugin component can use
 `useBbNavigate().openThreadPanel(...)` to request one of the
 same plugin's registered thread-panel actions; it returns false when the
-current surface has no thread side panel.
+current surface has no thread side panel. Pass
+`experimental_primarySurface: true` to collapse the conversation so the panel
+fills the thread (hosts that do not support the flag still open the side panel).
 
 See the
 [`composer-customization` reference plugin](../../examples/plugins/composer-customization/README.md)
